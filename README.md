@@ -197,7 +197,7 @@ Work in progress..
 
 **Hoang Thanh VO**
 
-- Email: [thanh@thanh-vo.com](maillto:thanh@thanh-vo.com) 
+- Email: [thanh@thanh-vo.com](mailto:thanh@thanh-vo.com) 
 
 ## License
 

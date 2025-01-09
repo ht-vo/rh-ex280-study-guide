@@ -28,6 +28,12 @@ Version: `V414K`
 
     2.5. [Method 5: Using Helm](#method-5-using-helm)
 
+3. [Manage authentication and authorization](#manage-authentication-and-authorization)
+
+    3.1. [Configuring HTPasswd Identity Provider](#configuring-htpasswd-identity-provider)
+
+    3.2. [Administering users and groups permissions](#administering-users-and-groups-permissions)
+
 ## Notes
 
 ### Common commands
@@ -230,6 +236,110 @@ $ helm list
 
 # Across all namespaces
 $ helm list -A
+```
+
+### Manage authentication and authorization
+
+#### Configuring HTPasswd Identity Provider
+
+Create an HTPasswd file
+
+```shell
+# httpd-tools package needed
+$ htpasswd -c -B -b ./htpasswd developer pa55w0rd1
+```
+
+Add a new user to the existing HTPasswd file
+
+```shell
+$ htpasswd -b ./htpasswd tester pa55w0rd2
+```
+
+Create the `secret` using the HTPassword file
+
+```shell
+$ oc create secret generic localusers \
+--from-file=htpasswd=./htpasswd
+-n openshift-config
+```
+
+Modify the `oauth/cluster` configuration
+
+```shell
+$ oc get oauth/cluster -o yaml > oauth.yaml
+```
+
+Add the `htpasswd` parameters
+
+```yaml
+# .spec.identityProviders[]
+- htpasswd:
+    fileData:
+      name: localusers
+  mappingClaim: claim
+  name: myusers
+  type: HTPasswd
+```
+
+Apply the modified `oauth/cluster` configuration
+
+```shell
+$ oc replace -f ./oauth.yaml
+```
+
+Wait for the new configuration to take effect
+
+```shell
+$ watch oc get pods -n openshift-authentication
+```
+
+#### Administering Users and Groups permissions
+
+Create a new group
+
+```shell
+$ oc adm groups new dev-group
+```
+
+Manage users in a group
+
+- Add a user to a group
+
+```shell
+$ oc adm groups add-users dev-group developer
+```
+
+- Remove a user to a group
+```shell
+$ oc adm groups remove-users dev-group developer
+```
+
+List groups and their users
+
+```shell
+$ oc get groups
+```
+
+Disallow users creating new projects
+
+```shell
+$ oc get clusterrolebindings | grep self-provisioner
+
+$ oc adm policy remove-role-from-group self-provisioner system:authenticated:oauth
+```
+
+Grant privileges to a group:
+
+- At the namespace level:
+
+```shell
+$ oc policy add-role-to-group edit dev-group
+```
+
+- At the cluster level:
+
+```shell
+$ oc adm policy add-role-to-group cluster-admin dev-group
 ```
 
 Work in progress..
